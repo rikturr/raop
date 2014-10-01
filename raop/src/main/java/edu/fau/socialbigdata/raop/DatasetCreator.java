@@ -22,33 +22,67 @@ public class DatasetCreator {
 	private static Set<String> numericAttributes = new LinkedHashSet<String>();
 	private static Set<String> timeAttributes = new LinkedHashSet<String>();
 	private static Set<String> resultAttributes = new LinkedHashSet<String>();
-	
 
 	public static void main(String[] args) throws Exception {
 		JSONParser parser = new JSONParser();
-		JSONArray json = (JSONArray) parser.parse(new FileReader(new File("src/main/resources/train.json")));
+		JSONArray train = (JSONArray) parser.parse(new FileReader(new File("src/main/resources/train.json")));
+		JSONArray test = (JSONArray) parser.parse(new FileReader(new File("src/main/resources/test.json")));
 
-		initialize();
+		//		initialize();
+		initializeForTest();
 
-		writeFullWithoutText(json);
-		writePostMetaFullDataSet(json);
+//		getTestAttributes(test);
 
-		writeOriginalResultDataSet(json);
-		writeModifiedResultDataSet(json);
+		writeFullWithoutText(train, "full_no_text_train");
+		writeFullWithoutText(test, "full_no_text_test");
+
+		writePostMetaFullDataSet(train);
+
+		writeOriginalResultDataSet(train);
+		writeModifiedResultDataSet(train);
 	}
 
-	private static void writeFullWithoutText(JSONArray json) throws IOException {
-		BufferedWriter writer = new BufferedWriter(new FileWriter("target/full_no_text.arff"));
+	private static void initializeForTest() {
+		numericAttributes.add("requester_number_of_posts_at_request");
+		numericAttributes.add("requester_account_age_in_days_at_request");
+		numericAttributes.add("requester_upvotes_minus_downvotes_at_request");
+		numericAttributes.add("requester_days_since_first_post_on_raop_at_request");
+		numericAttributes.add("requester_number_of_posts_on_raop_at_request");
+		numericAttributes.add("requester_upvotes_plus_downvotes_at_request");
+		numericAttributes.add("requester_number_of_comments_at_request");
+		numericAttributes.add("requester_number_of_subreddits_at_request");
+		numericAttributes.add("requester_number_of_comments_in_raop_at_request");
+		
+		timeAttributes.add("unix_timestamp_of_request_utc");
+		
+	}
+
+	//	private static void getTestAttributes(JSONArray test) {
+	//		Set<String> attributes = new LinkedHashSet<String>();
+	//		
+	//		for(Object e : test) {
+	//			JSONObject element = (JSONObject) e;
+	//			
+	//			for (Object attribute : element.keySet()) {
+	//				attributes.add((String) attribute);
+	//			}
+	//		}
+	//		
+	//		System.out.println(attributes);
+	//	}
+
+	private static void writeFullWithoutText(JSONArray json, String name) throws IOException {
+		BufferedWriter writer = new BufferedWriter(new FileWriter("target/" + name + ".arff"));
 
 		writer.write("@RELATION raop_full_no_text\n\n");
 		writer.write("@ATTRIBUTE " + ID_ATTRIBUTE + " STRING\n");
-		writer.write("@ATTRIBUTE post_was_edited {true,false}\n");
+//		writer.write("@ATTRIBUTE post_was_edited {true,false}\n");
 		for (String attribute : numericAttributes) {
 			writer.write("@ATTRIBUTE " + attribute + " NUMERIC\n");
 		}
-		for (String attribute : resultAttributes) {
-			writer.write("@ATTRIBUTE " + attribute + " NUMERIC\n");
-		}
+//		for (String attribute : resultAttributes) {
+//			writer.write("@ATTRIBUTE " + attribute + " NUMERIC\n");
+//		}
 		for (String attribute : timeAttributes) {
 			writer.write("@ATTRIBUTE " + attribute + " DATE \"yyyy-MM-dd HH:mm:ss\"\n");
 		}
@@ -62,16 +96,16 @@ public class DatasetCreator {
 			String row = (String) element.get(ID_ATTRIBUTE) + ",";
 
 			//add post_was_edited
-			try {
-				Boolean edited = (Boolean) element.get("post_was_edited");
-				if (edited == null) {
-					row += "?,";
-				} else {
-					row += edited + ",";
-				}
-			} catch (ClassCastException e) {
-				row += "?,";
-			}
+//			try {
+//				Boolean edited = (Boolean) element.get("post_was_edited");
+//				if (edited == null) {
+//					row += "?,";
+//				} else {
+//					row += edited + ",";
+//				}
+//			} catch (ClassCastException e) {
+//				row += "?,";
+//			}
 
 			//add numeric attributes
 			for (String attribute : numericAttributes) {
@@ -81,17 +115,17 @@ public class DatasetCreator {
 					row += element.get(attribute) + ",";
 				}
 			}
-			
+
 			//add result attributes
-			for (String attribute : resultAttributes) {
-				long value = (Long) element.get(attribute);
-				//missing value
-				if (element.get(attribute) == null) {
-					row += "?,";
-				} else {
-					row += value + ",";
-				}
-			}
+//			for (String attribute : resultAttributes) {
+//				Long value = (Long) element.get(attribute);
+//				//missing value
+//				if (value == null) {
+//					row += "?,";
+//				} else {
+//					row += value + ",";
+//				}
+//			}
 
 			//add time attributes
 			for (String attribute : timeAttributes) {
@@ -107,11 +141,15 @@ public class DatasetCreator {
 			}
 
 			//add class value
-			boolean classValue = (Boolean) element.get(CLASS_ATTRIBUTE);
-			if (classValue) {
-				row += "received_pizza";
+			Boolean classValue = (Boolean) element.get(CLASS_ATTRIBUTE);
+			if (classValue != null) {
+				if (classValue) {
+					row += "received_pizza";
+				} else {
+					row += "not_received_pizza";
+				}
 			} else {
-				row += "not_received_pizza";
+				row += "?";
 			}
 
 			writer.write(row + "\n");
@@ -141,7 +179,7 @@ public class DatasetCreator {
 
 		timeAttributes.add("unix_timestamp_of_request");
 		timeAttributes.add("unix_timestamp_of_request_utc");
-		
+
 		resultAttributes.add("number_of_downvotes_of_request_at_retrieval");
 		resultAttributes.add("number_of_upvotes_of_request_at_retrieval");
 		resultAttributes.add("request_number_of_comments_at_retrieval");
